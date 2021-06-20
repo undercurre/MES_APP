@@ -1,0 +1,270 @@
+<template>
+	<gracePage :customHeader="true">
+		<graceHeader slot="gHeader" background="#009c50">
+			<view class="grace-header-body">
+				<!-- 返回按钮 -->
+				<text class="grace-header-icons grace-icons  grace-white" @tap="goback">&#xe600;</text>
+				<!-- 中间内容 -->
+				<view class="grace-header-content-noflex main-tit"><text class="grace-white"
+						style="font-size: 38rpx;">安灯区</text></view>
+			</view>
+		</graceHeader>
+
+		<view slot="gBody" class="grace-body">
+			<view class="content">
+				<form class="grace-form" style="margin-top:80rpx;">
+					<view class="grace-form-item item-border">
+						<text class="grace-form-label">呼叫类型</text>
+						<view class="grace-form-body">
+							<text>{{ type }}</text>
+						</view>
+					</view>
+					<view class="grace-form-item item-border">
+						<text class="grace-form-label">呼叫代码</text>
+						<view class="grace-form-body">
+							<picker mode="selector" :range="callList.map(item => item.CALL_CODE)" @change="picker">
+								<div class="picker-s">
+									<input class="form-input" :style="{
+											color: callList.map(item => item.CALL_CODE)[codeIndex] ? '#333' : 'rgb(138, 138, 138)' ,textAlign:'left',width:'100%'
+										}" disabled type="text" :value="callList.map(item => item.CALL_CODE)[codeIndex] ? callList.map(item => item.CALL_CODE)[codeIndex] : '请选择线体'"
+										placeholder=" ">
+									<text class="grace-select-menu-icon icon-allow-b"></text>
+								</div>
+							</picker>
+						</view>
+					</view>
+					<view class="grace-form-item item-border">
+						<text class="grace-form-label">呼叫内容</text>
+						<view class="grace-form-body">
+							<textarea @blur="bindTextAreaBlur" auto-height :value="content" placeholder='请填写呼叫内容'/>
+						</view>
+					</view>
+					<scroll-view scroll-x>
+						<u-table class="tableInfor" type="selection" emptyText="没有数据"
+							style="position: relative;height: 900rpx;overflow: scroll;width: 1550rpx;">
+							<u-tr style="position: sticky;top: 0;overflow: scroll;">
+								<u-th style="width: 75rpx; flex: 0;">
+									<u-checkbox @change="checkAllChange" v-model="tableAllChecked">
+									</u-checkbox>
+								</u-th>
+								<u-th style="width: 250rpx;">呼叫编号</u-th>
+								<u-th style="width: 250rpx;">线体名称</u-th>
+								<u-th style="width: 400rpx;">站位名称</u-th>
+								<u-th style="width: 200rpx;">呼叫时间</u-th>
+								<u-th style="width: 300rpx;">呼叫代码</u-th>
+								<u-th style="width: 175rpx;">呼叫内容</u-th>
+							</u-tr>
+							<u-tr v-for="(item, index) in callTable" :key="item.Id">
+								<u-td style="width: 75rpx; flex: 0;">
+									<u-checkbox @change="checkboxChange" v-model="item.selectStatus">
+									</u-checkbox>
+								</u-td>
+								<u-td style="width: 250rpx;overflow: hidden;line-height: 21px;">{{ item.CALL_NO }}</u-td>
+								<u-td style="width: 250rpx;overflow: hidden;line-height: 21px;">{{ item.OPERATION_LINE_NAME }}</u-td>
+								<u-td style="width: 400rpx;overflow: hidden;line-height: 21px;">{{ item.OPERATION_SITE_NAME }}</u-td>
+								<u-td style="width: 200rpx;overflow: hidden;line-height: 21px;">{{ item.CREATE_TIME }}</u-td>
+								<u-td style="width: 300rpx;overflow: hidden;line-height: 21px;">{{ item.CALL_CODE }}</u-td>
+								<u-td style="width: 175rpx;overflow: hidden;line-height: 21px;">{{ item.CALL_CONTENT }}</u-td>
+							</u-tr>
+						</u-table>
+					</scroll-view>
+				</form>
+			</view>
+			<view class="button">
+				<button type="primary" @click="goback()">退出</button>
+				<button type="primary" @click="sign_but">签到</button>
+				<button type="primary" form-type="submit" @click="shout_but">呼叫</button>
+			</view>
+		</view>
+	</gracePage>
+</template>
+
+<script>
+	import graceHeader from '../../graceUI/components/graceHeader.vue';
+	import gracePage from '../../graceUI/components/gracePage.vue';
+	import {
+		CallConfig,
+		GetRecordBySiteId,
+		AddCallRecord,
+		EditCallRecord
+	} from '@/api/ESOP.js'
+	export default {
+		data() {
+			return {
+				type: null,
+				callList: [],
+				content: '',
+				codeIndex: -1,
+				callTable: [],
+				siteID: null,
+				lineID: null,
+				callTypeCode: null,
+				tableAllChecked: false
+			}
+		},
+		methods: {
+			goback() {
+				uni.navigateBack({
+					delta: 1
+				})
+			},
+			initPage(option) {
+				this.selectType(option.type)
+				this.initRecord()
+			},
+			selectType(type) {
+				this.callTypeCode = type;
+				switch (type) {
+					case '0':
+						this.type = '缺料呼叫'
+						break;
+					case '1':
+						this.type = '品质呼叫'
+						break;
+					case '2':
+						this.type = '设备呼叫'
+						break;
+					case '3':
+						this.type = '帮助呼叫'
+						break;
+				};
+				this.initCall(type).then(res => {
+					this.callList = res.Result
+				});
+			},
+			async initCall(callTypeCode) {
+				return await CallConfig(callTypeCode)
+			},
+			async initRecord() {
+				const lineList = this.$store.getters.lineList || [];
+				const lineIndex = this.$store.getters.currentLine;
+				const stationList = this.$store.getters.stationList || [];
+				const stationIndex = this.$store.getters.currentStation;
+				this.lineID = lineList[lineIndex].SMT_LINE_ID;
+				this.siteID = stationList[stationIndex].ID;
+				let query = {
+					Page: 1,
+					Limit: 15,
+					OPERATION_LINE_ID: this.lineID,
+					SITEID: this.siteID
+				}
+				const res = await GetRecordBySiteId(query)
+				if (res.Result) {
+					this.callTable = JSON.parse(res.Result)
+					this.callTable.forEach(item => item.selectedStatus = false)
+				}
+			},
+			picker(e) {
+				this.codeIndex = parseInt(e.detail.value)
+				this.content = this.callList[this.codeIndex].CHINESE
+			},
+			bindTextAreaBlur(e) {
+				this.content = e.detail.value
+			},
+			async shout_but() {
+				if (this.codeIndex === -1) {
+					uni.showModal({
+						title: '提示',
+						content: '请选择呼叫代码',
+						showCancel: false,
+					})
+					return
+				}
+				if (this.content === '') {
+					uni.showModal({
+						title: '提示',
+						content: '请输入呼叫内容',
+						showCancel: false,
+					})
+					return
+				}
+				const userInfo = this.$store.getters.userInfo;
+				const params = {
+					CALL_TYPE_CODE: this.callTypeCode,
+					CALL_CONTENT: this.content,
+					CALL_CODE: this.callList.map(item => item.CALL_CODE)[this.codeIndex],
+					OPERATION_SITE_ID: this.siteID ? this.siteID : '000',
+					OPERATOR: userInfo.USER_NAME
+				}
+				const res = await AddCallRecord(params)
+				if (res.Result) {
+					var myDate = new Date()
+					var obj = {
+						CREATE_TIME: myDate.toLocaleString(),
+						OPERATOR: userInfo.USER_NAME,
+						CALL_CONTENT: this.content
+					}
+					uni.showModal({
+						title: '提示',
+						content: '呼叫成功',
+						showCancel: false,
+						success: () => {
+							this.goback()
+						}
+					})
+				}	
+			},
+			// 签到
+			    async sign_but () {
+			      if (this.signArr.CALL_RECORD_IDS === '') {
+			        uni.showModal({
+			        	title: '提示',
+			        	content: '请选择签到的一行',
+			        	showCancel: false,
+			        })
+			        return false
+			      }
+			      const res = await EditCallRecord(this.signArr)
+			      if (res.Result) {
+			        uni.showModal({
+			        	title: '提示',
+			        	content: '签到成功',
+			        	showCancel: false,
+						success: () => {
+							this.goback()
+						}
+			        })
+			      }
+			    },
+			checkAllChange(){
+				this.tableAllChecked = !this.tableAllChecked
+				this.callTable.forEach(item => item.selectedStatus = this.tableAllChecked)
+			}
+		},
+		components: {
+			graceHeader,
+			gracePage
+		},
+		onLoad(option) {
+			this.initPage(option)
+		},
+		onShow() {
+	
+		}
+	}
+</script>
+
+<style lang="scss" scoped>
+	.grace-form {
+		margin-top: 20rpx !important;
+	}
+	.button {
+		display: flex;
+		justify-content: space-between;
+		margin: 20rpx auto;
+		button {
+			width: 30%;
+			height: 80rpx;
+			line-height: 80rpx;
+			box-sizing: border-box;
+			font-size: 14px;
+		}
+	}
+	uni-picker{
+		display: flex;
+		align-items: center;
+	}
+	.u-checkbox{
+		justify-content: center;
+	}
+</style>

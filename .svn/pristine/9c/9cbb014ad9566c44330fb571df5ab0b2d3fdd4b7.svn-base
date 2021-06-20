@@ -1,0 +1,105 @@
+<template>
+	<gracePage :customHeader="true">
+		<graceHeader slot="gHeader" background="#009c50">
+			<view class="grace-header-body">
+				<!-- 返回按钮 -->
+				<text class="grace-header-icons grace-icons  grace-white" @tap="goback">&#xe600;</text>
+				<!-- 中间内容 -->
+				<view class="grace-header-content-noflex main-tit"><text class="grace-white"
+						style="font-size: 38rpx;">安灯区</text></view>
+			</view>
+		</graceHeader>
+
+		<view slot="gBody" class="grace-body">
+			<view class="topBox">
+				<view class="blockTop" style="background-color: #53CDD8;" @click="selectType(0)">
+					<text>缺料</text>
+				</view>
+				<view class="blockTop" style="background-color: #E4F68F;" @click="selectType(1)">
+					<text>品质</text>
+				</view>
+				<view class="blockTop" style="background-color: #FFD460;" @click="selectType(2)">
+					<text>设备</text>
+				</view>
+				<view class="blockTop" style="background-color: #A3F7BF;" @click="selectType(3)">
+					<text>帮助</text>
+				</view>
+			</view>
+		</view>
+	</gracePage>
+</template>
+
+<script>
+	import graceHeader from '../../graceUI/components/graceHeader.vue';
+	import gracePage from '../../graceUI/components/gracePage.vue';
+	export default {
+		data() {
+			return {
+
+			}
+		},
+		components: {
+			graceHeader,
+			gracePage
+		},
+		onLoad() {
+			this.initPage()
+		},
+		methods: {
+			goback() {
+				uni.navigateBack({
+					delta: 1
+				})
+			},
+			selectType(type) {
+				uni.navigateTo({
+					url: `/pages/ESOP/detail?type=${type}`
+				})
+			},
+			initPage() {
+				// 检查当前是否配置站点
+				let station = this.$store.getters.currentStation;
+				if (!station && station !== 0) {
+					uni.showModal({
+						title: '提示',
+						content: '没有设置站点，请到设置页的站点配置进行配置',
+						showCancel: false,
+						success: (res) => {
+							if (res.confirm) {
+								uni.navigateTo({
+									url: `/pages/stationSet/stationSet`
+								})
+							} else if (res.cancel) {
+								console.log('取消')
+							}
+						}
+					})
+				}
+			},
+		}
+	}
+</script>
+
+<style scoped lang="scss">
+	@import '~@/styles/publics.scss';
+
+	.topBox {
+		margin-top: 20rpx;
+		width: 100%;
+		display: flex;
+		justify-content: space-between;
+		flex-wrap: wrap;
+
+		.blockTop {
+			width: 48%;
+			height: 40vh;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			color: #FFFFFF;
+			border-radius: 32rpx;
+			margin: 10rpx 0;
+			font-size: 60rpx;
+		}
+	}
+</style>
